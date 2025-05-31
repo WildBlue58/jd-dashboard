@@ -69,6 +69,26 @@ const app = createApp({
         // 加载中国地图数据
         const loadChinaMap = async () => {
             try {
+                // 优先使用本地地图数据
+                if (window.CHINA_MAP_DATA) {
+                    console.log('✅ 使用本地中国地图数据');
+                    
+                    // 提取地图中实际的省份名称
+                    if (window.CHINA_MAP_DATA.features) {
+                        actualProvinceNames = window.CHINA_MAP_DATA.features.map(feature => {
+                            const name = feature.properties?.name || feature.properties?.NAME || '未知';
+                            return name;
+                        });
+                        console.log('🗺️ 地图中实际省份名称:', actualProvinceNames.slice(0, 10));
+                    }
+                    
+                    echarts.registerMap('china', window.CHINA_MAP_DATA);
+                    console.log('✅ 本地中国地图数据注册成功，共', actualProvinceNames.length, '个地理特征');
+                    return true;
+                }
+                
+                // 备用方案：尝试从CDN加载
+                console.log('⚠️ 本地地图数据不可用，尝试CDN加载...');
                 const response = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json');
                 const geoJSON = await response.json();
                 
@@ -78,20 +98,31 @@ const app = createApp({
                         const name = feature.properties?.name || feature.properties?.NAME || '未知';
                         return name;
                     });
-                    console.log('🗺️ 地图中实际省份名称:', actualProvinceNames.slice(0, 10));
+                    console.log('🗺️ CDN地图中实际省份名称:', actualProvinceNames.slice(0, 10));
                 }
                 
                 echarts.registerMap('china', geoJSON);
-                console.log('✅ 中国地图数据加载成功，共', actualProvinceNames.length, '个地理特征');
+                console.log('✅ CDN中国地图数据加载成功，共', actualProvinceNames.length, '个地理特征');
                 return true;
             } catch (error) {
-                console.error('❌ 中国地图数据加载失败:', error);
-                // 使用备用方案：注册简化的地图数据
-                echarts.registerMap('china', {
+                console.error('❌ 地图数据加载失败，使用最小化本地数据:', error);
+                
+                // 最终备用方案：使用最简化的地图数据结构
+                const fallbackMapData = {
                     type: "FeatureCollection",
-                    features: []
-                });
-                return false;
+                    features: [
+                        { properties: { name: "北京市" }, geometry: { type: "Polygon", coordinates: [[[116.4, 39.9], [116.5, 40.1], [116.3, 40.1], [116.4, 39.9]]] }},
+                        { properties: { name: "上海市" }, geometry: { type: "Polygon", coordinates: [[[121.4, 31.2], [121.5, 31.4], [121.3, 31.4], [121.4, 31.2]]] }},
+                        { properties: { name: "广东省" }, geometry: { type: "Polygon", coordinates: [[[113.3, 23.1], [113.4, 23.3], [113.2, 23.3], [113.3, 23.1]]] }},
+                        { properties: { name: "江苏省" }, geometry: { type: "Polygon", coordinates: [[[118.8, 32.1], [118.9, 32.3], [118.7, 32.3], [118.8, 32.1]]] }},
+                        { properties: { name: "浙江省" }, geometry: { type: "Polygon", coordinates: [[[120.2, 30.3], [120.3, 30.5], [120.1, 30.5], [120.2, 30.3]]] }}
+                    ]
+                };
+                
+                actualProvinceNames = fallbackMapData.features.map(f => f.properties.name);
+                echarts.registerMap('china', fallbackMapData);
+                console.log('🆘 使用备用地图数据，包含', actualProvinceNames.length, '个省份');
+                return true;
             }
         };
         
