@@ -291,7 +291,7 @@ MIT License - 自由使用、修改、分发
 
 ---
 
-## �� 致谢
+## 致谢
 
 感谢以下开源项目和社区：
 - [Vue.js](https://vuejs.org/) - 渐进式JavaScript框架
